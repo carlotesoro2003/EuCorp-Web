@@ -170,7 +170,7 @@
 
 <!-- Page Layout -->
 <div class="min-h-screen p-8">
-    <h1 class="text-3xl font-bold mb-6">Mid-Year Monitoring</h1>
+    <h1 class="text-3xl font-bold mb-6">Mid-Year Opportunity Monitoring</h1>
     <button on:click={evaluateAllGoals} class="btn bg-indigo-500 hover:bg-indigo-600 text-white font-medium mb-6">
         Evaluate All Opportunities
     </button>
