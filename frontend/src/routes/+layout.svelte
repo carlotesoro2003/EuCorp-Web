@@ -245,7 +245,7 @@
             <li>
               <details>
                 <summary class="flex items-center gap-3 font-bold">
-                  <IconParkMonitor class="h-6 w-6 " /> Monitoring-Test-2
+                  <IconParkMonitor class="h-6 w-6 " /> Monitoring
                 </summary>
                 <ul class="menu ml-4 space-y-2">
                   <li>
