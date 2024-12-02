@@ -38,7 +38,6 @@
         showDialog = true;
     }
 
-    // Fetch user profile to get profile_id
     const fetchUserProfile = async () => {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error || !session) {
@@ -61,7 +60,6 @@
         profileId = profileData.id;
     };
 
-    // Fetch opportunities for the logged-in user
     const fetchOpportunities = async () => {
         if (!profileId) return;
 
@@ -104,7 +102,6 @@
         }
     };
 
-    // Evaluate a single goal
     async function evaluateGoal(id: number, goal: string, evaluation: string) {
         try {
             const response = await axios.post(backendUrl, { target: goal, evaluation });
@@ -162,6 +159,14 @@
         );
     }
 
+    function autoResize(event: Event) {
+        const textarea = event.target as HTMLTextAreaElement;
+        textarea.style.height = "auto";
+        textarea.style.width = "auto";
+        textarea.style.height = `${textarea.scrollHeight}px`;
+        textarea.style.width = `${textarea.scrollWidth + 20}px`; // Adds padding
+    }
+
     onMount(async () => {
         await fetchUserProfile();
         await fetchOpportunities();
@@ -193,10 +198,14 @@
                         <td class="px-4 py-3">{goal}</td>
                         <td class="px-4 py-3">
                             <textarea
-                                class="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-indigo-200"
+                                class="border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-indigo-200"
                                 placeholder="Enter your evaluation"
                                 value={evaluation}
-                                on:input={(e) => handleInput(id, 'evaluation', (e.target as HTMLInputElement).value)}
+                                on:input={(e) => {
+                                    handleInput(id, 'evaluation', (e.target as HTMLTextAreaElement).value);
+                                    autoResize(e);
+                                }}
+                                style="overflow:hidden; resize:none; min-width: 200px;"
                                 disabled={achieved === "Achieved"}
                             ></textarea>
                         </td>

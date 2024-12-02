@@ -16,6 +16,7 @@
     supabase: typeof import("$lib/supabaseClient").supabase;
     session: any;
   };
+  
   let { session } = data;
   let loading = true;
   let isVerified = false;
