@@ -14,6 +14,7 @@
     created_at: string;
     objective_id: number;
     is_approved: boolean; // Added is_approved field
+    profile_id: string; // Added profile_id field from action_plans
   }
 
   interface StrategicObjective {
@@ -30,18 +31,7 @@
   let objective: StrategicObjective | null = null;
   let strategicGoal: StrategicGoal | null = null;
   let objective_id: number | null = null;
-  let profile_id: string | null = null;
   let isLoading = true;
-
-  // Fetch user profile to get profile_id
-  const fetchUserProfile = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      profile_id = user.id;
-    } else {
-      console.error("No logged-in user found.");
-    }
-  };
 
   // Fetch data on page load
   onMount(async () => {
@@ -49,8 +39,6 @@
     objective_id = parseInt(params.id);
 
     if (objective_id) {
-      await fetchUserProfile();
-
       try {
         // Fetch action plans
         const { data: plansData, error: plansError } = await supabase
@@ -101,12 +89,22 @@
 
   // Approve action plan and add to plan_monitoring table
   const approveActionPlan = async (planId: number) => {
-    if (!profile_id) {
-      console.error("User profile ID is required.");
-      return;
-    }
-
     try {
+      // Fetch profile_id from the action_plan
+      const { data: planData, error: fetchError } = await supabase
+        .from("action_plans")
+        .select("profile_id")
+        .eq("id", planId)
+        .single();
+
+      if (fetchError || !planData) {
+        console.error("Error fetching profile_id from action_plan:", fetchError);
+        return;
+      }
+
+      const planProfileId = planData.profile_id;
+
+      // Update is_approved field in action_plan
       const { error: updateError } = await supabase
         .from("action_plans")
         .update({ is_approved: true })
@@ -120,7 +118,7 @@
       // Add to plan_monitoring table
       const { error: insertError } = await supabase.from("plan_monitoring").insert({
         action_plan_id: planId,
-        profile_id,
+        profile_id: planProfileId,
       });
 
       if (insertError) {
@@ -273,13 +271,5 @@
     border-radius: 6px;
     cursor: pointer;
   }
-  .btn-error {
-    background-color: #ef4444;
-  }
-  .btn-success {
-    background-color: #10b981;
-  }
-  .btn-secondary {
-    background-color: #3b82f6;
-  }
+
 </style>
