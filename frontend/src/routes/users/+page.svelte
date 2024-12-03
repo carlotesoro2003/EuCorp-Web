@@ -20,6 +20,8 @@
   let selectedDepartmentId: string | null = null;
   let selectedRole: string = "";
   let showAlert = false;
+  let alertMessage = "";
+  let alertType = "success"; // "success", "error", "info", etc.
   let saving = false;
   let loading = true;
   let approvingUserId: string | null = null; // Tracks the user being approved
@@ -38,7 +40,7 @@
       .select("id, name");
 
     if (error) {
-      console.error("Error fetching departments:", error.message);
+      displayAlert("Error fetching departments: " + error.message, "error");
     } else {
       departments = deptData || [];
     }
@@ -52,7 +54,7 @@
       );
 
     if (error) {
-      console.error("Error fetching users:", error.message);
+      displayAlert("Error fetching users: " + error.message, "error");
     } else {
       users = (userData || []).map((user) => ({
         ...user,
@@ -62,6 +64,16 @@
       }));
     }
   }
+
+  const displayAlert = (message: string, type: string) => {
+    alertMessage = message;
+    alertType = type;
+    showAlert = true;
+
+    setTimeout(() => {
+      showAlert = false;
+    }, 3000); // Auto-hide after 3 seconds
+  };
 
   const editUser = (user: (typeof users)[0]) => {
     selectedUser = { ...user };
@@ -75,7 +87,7 @@
         !selectedRole ||
         (selectedRole !== "admin" && !selectedDepartmentId)
       ) {
-        showAlert = true;
+        displayAlert("Role or department selection is missing.", "error");
         return;
       }
 
@@ -91,7 +103,7 @@
         .eq("id", selectedUser.id);
 
       if (error) {
-        console.error("Error updating profile:", error.message);
+        displayAlert("Error updating profile: " + error.message, "error");
       } else {
         const updatedUserIndex = users.findIndex(
           (user) => user.id === selectedUser?.id
@@ -105,11 +117,10 @@
             role: selectedRole,
           };
         }
-        alert("Profile updated successfully!");
+        displayAlert("Profile updated successfully!", "success");
         selectedUser = null;
       }
       saving = false;
-      showAlert = false;
     }
   };
 
@@ -122,34 +133,32 @@
         .eq("id", userId);
 
       if (error) {
-        console.error("Error approving user:", error.message);
-        alert("Failed to approve user.");
+        displayAlert("Failed to approve user: " + error.message, "error");
       } else {
-        alert("User approved successfully!");
-        // Update the user list to reflect the changes
+        displayAlert("User approved successfully!", "success");
         users = users.map((user) =>
           user.id === userId ? { ...user, is_verified: true } : user
         );
       }
     } catch (err) {
-      console.error("Error approving user:", err);
-      alert("An unexpected error occurred.");
+      displayAlert("An unexpected error occurred.", "error");
     } finally {
       approvingUserId = null; // Stop spinner
     }
   };
 
   const deleteUser = async (userId: string) => {
+    deletingUserId = userId;
     try {
       // Delete the user from Supabase Authentication
       const { error: authError } =
         await supabaseAdmin.auth.admin.deleteUser(userId);
       if (authError) {
-        console.error(
-          "Error deleting user from authentication:",
-          authError.message
+        displayAlert(
+          "Error deleting user from authentication: " + authError.message,
+          "error"
         );
-        return { success: false, message: "Failed to delete user." };
+        return;
       }
 
       // Delete the user from the profiles table
@@ -159,19 +168,28 @@
         .eq("id", userId);
 
       if (profileError) {
-        console.error("Error deleting user profile:", profileError.message);
-        return { success: false, message: "Failed to delete profile." };
+        displayAlert("Error deleting user profile: " + profileError.message, "error");
+      } else {
+        users = users.filter((user) => user.id !== userId);
+        displayAlert("User deleted successfully!", "success");
       }
-
-      return { success: true, message: "User deleted successfully!" };
     } catch (err) {
-      console.error("Error deleting user:", err);
-      return { success: false, message: "An unexpected error occurred." };
+      displayAlert("An unexpected error occurred.", "error");
+    } finally {
+      deletingUserId = null;
     }
   };
 </script>
 
 <div class="min-h-screen bg-base-300 p-8">
+  {#if showAlert}
+    <div class="alert alert-{alertType} shadow-lg mb-4">
+      <div>
+        <span>{alertMessage}</span>
+      </div>
+    </div>
+  {/if}
+
   <h1 class="text-2xl font-bold mb-4">User List</h1>
 
   <div class="overflow-x-auto">
@@ -262,7 +280,6 @@
     </table>
   </div>
 
-  <!-- Modal for editing a user -->
   <!-- Modal for editing a user -->
   {#if selectedUser}
     <div class="modal modal-open">

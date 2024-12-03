@@ -16,7 +16,7 @@
     supabase: typeof import("$lib/supabaseClient").supabase;
     session: any;
   };
-  
+
   let { session } = data;
   let loading = true;
   let isVerified = false;
@@ -31,9 +31,7 @@
   $: currentPath = $page.url.pathname;
 
   const ensureSession = async () => {
-    console.log("Ensuring session...");
     if (!session) {
-      console.log("No session found. Redirecting to /login...");
       loading = false;
       goto("/login");
       return;
@@ -41,8 +39,6 @@
 
     try {
       const user = session.user;
-      console.log("Session found:", user);
-
       const { data: profileData, error: fetchError } = await supabase
         .from("profiles")
         .select("id, role, is_verified, profile_pic, department_id, email")
@@ -50,48 +46,47 @@
         .single();
 
       if (fetchError) {
-        console.error("Error fetching profile:", fetchError.message);
-        loading = false;
-        goto("/login");
-        return;
+        if (fetchError.code === "PGRST116") {
+          const { error: insertError } = await supabase.from("profiles").insert({
+            id: user.id,
+            email: user.email,
+            first_name: user.user_metadata?.first_name || "New",
+            last_name: user.user_metadata?.last_name || "User",
+            role: "user",
+            is_verified: false,
+          });
+
+          if (insertError) {
+            goto("/login");
+            return;
+          }
+        } else {
+          goto("/login");
+          return;
+        }
       }
 
       if (profileData) {
-        console.log("Profile data:", profileData);
         isVerified = profileData.is_verified ?? false;
         userRole = profileData.role ?? null;
         profilePic = profileData.profile_pic;
         email = profileData.email;
 
-        // Fetch department name if department_id exists
         if (profileData.department_id) {
-          const { data: departmentData, error: departmentError } =
-            await supabase
-              .from("departments")
-              .select("name")
-              .eq("id", profileData.department_id)
-              .single();
-
-          if (departmentError) {
-            console.error(
-              "Error fetching department:",
-              departmentError.message
-            );
-          } else {
-            departmentName = departmentData?.name ?? "No Department";
-          }
+          const { data: departmentData } = await supabase
+            .from("departments")
+            .select("name")
+            .eq("id", profileData.department_id)
+            .single();
+          departmentName = departmentData?.name ?? "No Department";
         }
 
         if (!isVerified) {
-          console.warn("User not verified. Redirecting to /login...");
-          loading = false;
           goto("/login");
           return;
         }
       }
     } catch (err) {
-      console.error("Error during session validation:", err);
-      loading = false;
       goto("/login");
     } finally {
       loading = false;
@@ -100,9 +95,7 @@
 
   async function logout() {
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error logging out:", error.message);
-    }
+    if (error) console.error("Error logging out:", error.message);
     goto("/login");
   }
 
@@ -115,25 +108,14 @@
   }
 
   onMount(() => {
-    console.log("App mounted. Checking session...");
     ensureSession();
-
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        console.log("Auth state changed:", event, newSession);
+      (_, newSession) => {
         session = newSession;
-
-        if (!session) {
-          console.log(
-            "Session expired or logged out. Redirecting to /login..."
-          );
-          goto("/login");
-        } else {
-          ensureSession();
-        }
+        if (!session) goto("/login");
+        else ensureSession();
       }
     );
-
     return () => {
       authListener.subscription.unsubscribe();
     };
@@ -142,10 +124,7 @@
 
 {#if loading}
   <div class="flex items-center justify-center min-h-screen bg-base-300">
-    <div class="loader">
-      <span class="loading loading-spinner loading-sm"></span>
-      Loading...
-    </div>
+    <span class="loading loading-spinner loading-lg"></span>
   </div>
 {:else if session && isVerified}
   <div class="flex h-screen bg-base-100 overflow-hidden">
@@ -334,19 +313,12 @@
       </nav>
     </aside>
     <div class="flex flex-col flex-1 ml-64 overflow-auto">
-      <header
-        class="h-16 flex justify-between bg-base-300 items-center px-4 fixed top-0 left-64 right-0 z-40 shadow"
-      >
+      <header class="h-16 flex justify-between bg-base-300 items-center px-4 fixed top-0 left-64 right-0 z-40 shadow">
         <div class="flex items-center">
-          <span class="font-bold text-lg"
-            >{userRole === "admin" ? "Admin Panel" : departmentName} Dashboard</span
-          >
+          <span class="font-bold text-lg">{userRole === "admin" ? "Admin Panel" : departmentName} Dashboard</span>
         </div>
         <div class="flex items-center space-x-4">
-          <button
-            on:click={toggleTheme}
-            class="btn btn-circle btn-sm bg-transparent border-none"
-          >
+          <button on:click={toggleTheme} class="btn btn-circle btn-sm bg-transparent border-none">
             {#if isDarkMode}
               <IconMoon class="h-6 w-6" />
             {:else}
@@ -356,35 +328,16 @@
           <div class="dropdown dropdown-end">
             <button class="btn btn-ghost">
               {#if profilePic}
-                <img
-                  src={profilePic}
-                  alt="Profile"
-                  class="w-10 h-10 rounded-full"
-                />
+                <img src={profilePic} alt="Profile" class="w-10 h-10 rounded-full" />
               {:else}
-                <div
-                  class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-6 w-6 text-gray-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M5.121 18.364A7.986 7.986 7.986 0 0112 14a7.986 7.986 7.986 0 016.879 4.364M12 10a4 4 0 110-8 4 4 0 010 8z"
-                    />
+                <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 18.364A7.986 7.986 7.986 0 0112 14a7.986 7.986 7.986 0 016.879 4.364M12 10a4 4 0 110-8 4 4 0 010 8z" />
                   </svg>
                 </div>
               {/if}
             </button>
-            <ul
-              class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52"
-            >
+            <ul class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
               <li><span class="text-gray-500 text-xs">{email}</span></li>
               <li><a href="/profile">Profile</a></li>
               <li>
@@ -406,12 +359,8 @@
 {:else}
   <div class="flex items-center justify-center min-h-screen bg-base-300">
     <div class="text-center">
-      <h1 class="text-2xl font-bold text-yellow-500 mb-4">
-        Pending for System Access
-      </h1>
-      <p class="text-white">
-        Your account is under review. Please wait for verification.
-      </p>
+      <h1 class="text-2xl font-bold text-yellow-500 mb-4">Pending for System Access</h1>
+      <p class="text-white">Your account is under review. Please wait for verification.</p>
     </div>
   </div>
 {/if}
