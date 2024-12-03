@@ -98,7 +98,7 @@
     });
 </script>
 
-<div class="min-h-screen bg-base-300 p-8">
+<div class="min-h-screen  p-8">
     <h1 class="text-3xl font-bold mb-6">Classifications</h1>
 
     <!-- Alert -->
@@ -109,17 +109,17 @@
     {/if}
 
     <!-- Table -->
-    <div class="overflow-x-auto bg-base-100 shadow-lg rounded-lg">
+    <div class="overflow-x-auto shadow-lg rounded-lg">
         <table class="table w-full">
             <thead>
-                <tr>
+                <tr class="border">
                     <th class="px-6 py-4">Classification Name</th>
                     <th class="px-6 py-4">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {#each classifications as classification}
-                    <tr class="hover border-b border-gray-700">
+                    <tr class="hover border border-gray-700">
                         <td class="px-6 py-4">{classification.name}</td>
                         <td class="px-6 py-4 flex gap-4">
                             <button
@@ -171,7 +171,7 @@
                     >
                         {#if !isSaving} Save {/if}
                     </button>
-                    <button class="btn" on:click={closeDialog}>Cancel</button>
+                    <button class="btn btn-accent" on:click={closeDialog}>Cancel</button>
                 </div>
             </div>
         </div>

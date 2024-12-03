@@ -1,6 +1,8 @@
 <script lang="ts">
   import { supabase } from "$lib/supabaseClient";
   import { onMount } from "svelte";
+  import jsPDF from "jspdf";
+  import autoTable from "jspdf-autotable";
 
   interface Risk {
     id: string;
@@ -12,7 +14,7 @@
     budget: number;
     profile_id: string;
   }
-  
+
   interface Classification {
     id: number;
     name: string;
@@ -138,22 +140,6 @@
     if (!error) riskMonitoringRating = data;
   };
 
-  // Fetch all data on mount
-  onMount(() => {
-    Promise.all([
-      fetchRisks(),
-      fetchClassification(),
-      fetchLikelihoodRating(),
-      fetchSeverity(),
-      fetchRiskControlRating(),
-      fetchRiskMonitoringRating(),
-      fetchRiskAssessment(),
-    ]).catch((error) => {
-      console.error("Error fetching data:", error);
-      errorMessage = "Failed to fetch some data.";
-    });
-  });
-
   // Helper functions to retrieve names from IDs with fallbacks
   const getLikelihoodRatingName = (id: number | null) =>
     likelihoodRating.find((item) => item.id === id)?.name || "Not Available";
@@ -169,9 +155,71 @@
 
   const getRiskAssessmentForRisk = (riskId: string) =>
     riskAssessment.filter((assessment) => assessment.risk_id === riskId);
+
+  const exportToPDF = () => {
+    const doc = new jsPDF("landscape");
+
+    doc.setFontSize(12);
+    doc.text("Risk and Risk Assessment Data", 14, 15);
+
+    autoTable(doc, {
+      startY: 20,
+      head: [["RRN", "Risk Statement", "Classification", "Likelihood", "Severity", "Control Rating", "Monitoring Rating"]],
+      body: risks.flatMap((risk) => {
+        const assessments = getRiskAssessmentForRisk(risk.id);
+        if (assessments.length === 0) {
+          return [
+            [
+              risk.rrn,
+              risk.risk_statement,
+              classification.find((cls) => cls.id === risk.classification)?.name || "N/A",
+              "No Data",
+              "No Data",
+              "No Data",
+              "No Data",
+            ],
+          ];
+        }
+
+        return assessments.map((assessment) => [
+          risk.rrn,
+          risk.risk_statement,
+          classification.find((cls) => cls.id === risk.classification)?.name || "N/A",
+          getLikelihoodRatingName(assessment.lr),
+          getSeverityName(assessment.s),
+          getRiskControlRatingName(assessment.rcr),
+          getRiskMonitoringRatingStatus(assessment.rmr),
+        ]);
+      }),
+    });
+
+    doc.save("Risks_Assessment_Data.pdf");
+  };
+
+  // Fetch all data on mount
+  onMount(() => {
+    Promise.all([
+      fetchRisks(),
+      fetchClassification(),
+      fetchLikelihoodRating(),
+      fetchSeverity(),
+      fetchRiskControlRating(),
+      fetchRiskMonitoringRating(),
+      fetchRiskAssessment(),
+    ]).catch((error) => {
+      console.error("Error fetching data:", error);
+      errorMessage = "Failed to fetch some data.";
+    });
+  });
 </script>
 
 <div class="container mx-auto my-6">
+  <div class="mb-4">
+    <button class="btn btn-primary" on:click={exportToPDF}>
+      Export to PDF
+    </button>
+  </div>
+
   {#if isLoading}
     <div class="text-center text-xl">
       <span class="loading loading-spinner loading-md"></span>

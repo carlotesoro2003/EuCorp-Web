@@ -58,7 +58,7 @@
 
         await fetchRisks();
         await fetchNextRrnNumber();
-        await fetchClassification(); // Fetch classifications here
+        await fetchClassification();
       } else {
         errorMessage = "User is not logged in.";
       }
@@ -177,6 +177,13 @@
     }
   };
 
+  const adjustTextareaSize = (target: HTMLTextAreaElement) => {
+    target.style.height = "auto";
+    target.style.width = "auto";
+    target.style.height = `${target.scrollHeight}px`;
+    target.style.width = `${Math.max(300, target.scrollWidth)}px`; // Set a minimum width
+  };
+
   onMount(() => {
     fetchUserProfile();
   });
@@ -214,24 +221,18 @@
       <tbody>
         {#each risks as risk, index}
           <tr>
-            <td>
+            <td style="width: 200px;">
               <input type="text" bind:value={risk.rrn} class="input input-bordered w-full" readonly />
             </td>
             <td>
               <textarea
                 bind:value={risk.risk_statement}
-                class="input input-bordered w-full"
-                rows="1"
-                style="overflow:hidden"
-                on:input={(e) => {
-                  if (e.target) {
-                    (e.target as HTMLTextAreaElement).style.height = `${(e.target as HTMLTextAreaElement).scrollHeight}px`;
-                  }
-                }}
+                class="textarea textarea-bordered w-full"
+                on:input={(e) => adjustTextareaSize(e.target as HTMLTextAreaElement)}
               ></textarea>
             </td>
-            <td>
-              <select bind:value={risk.classification} class="input input-bordered w-full">
+            <td style="width: 250px;">
+              <select bind:value={risk.classification} class="select select-bordered w-full">
                 <option value={null}>Select classification</option>
                 {#each classification as cls}
                   <option value={cls.id}>{cls.name}</option>
@@ -241,31 +242,23 @@
             <td>
               <textarea
                 bind:value={risk.actions}
-                class="input input-bordered w-full"
-                rows="1"
-                style="overflow:hidden"
-                on:input={(e) => {
-                  if (e.target) {
-                    (e.target as HTMLTextAreaElement).style.height = `${(e.target as HTMLTextAreaElement).scrollHeight}px`;
-                  }
-                }}
+                class="textarea textarea-bordered w-full"
+                on:input={(e) => adjustTextareaSize(e.target as HTMLTextAreaElement)}
               ></textarea>
             </td>
             <td>
               <textarea
                 bind:value={risk.key_persons}
-                class="input input-bordered w-full"
-                rows="1"
-                style="overflow:hidden"
-                on:input={(e) => {
-                  if (e.target) {
-                    (e.target as HTMLTextAreaElement).style.height = `${(e.target as HTMLTextAreaElement).scrollHeight}px`;
-                  }
-                }}
+                class="textarea textarea-bordered w-full"
+                on:input={(e) => adjustTextareaSize(e.target as HTMLTextAreaElement)}
               ></textarea>
             </td>
             <td>
-              <input type="number" bind:value={risk.budget} class="input input-bordered w-full" />
+              <textarea
+              bind:value={risk.budget}
+              class="textarea textarea-bordered w-full"
+              on:input={(e) => adjustTextareaSize(e.target as HTMLTextAreaElement)}
+            ></textarea>
             </td>
             <td>
               <button on:click={() => removeRow(index)} class="btn btn-error">Remove</button>

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { supabase } from '$lib/supabaseClient';
-  import { page } from '$app/stores';
-  import jsPDF from 'jspdf';
-  import autoTable from 'jspdf-autotable'; // Import autotable
+  import { onMount } from "svelte";
+  import { supabase } from "$lib/supabaseClient";
+  import { page } from "$app/stores";
+  import jsPDF from "jspdf";
+  import autoTable from "jspdf-autotable";
 
   interface ActionPlan {
     id: number;
@@ -13,6 +13,7 @@
     key_person_responsible: string;
     created_at: string;
     objective_id: number;
+    is_approved: boolean; // Added is_approved field
   }
 
   interface StrategicObjective {
@@ -29,7 +30,18 @@
   let objective: StrategicObjective | null = null;
   let strategicGoal: StrategicGoal | null = null;
   let objective_id: number | null = null;
+  let profile_id: string | null = null;
   let isLoading = true;
+
+  // Fetch user profile to get profile_id
+  const fetchUserProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      profile_id = user.id;
+    } else {
+      console.error("No logged-in user found.");
+    }
+  };
 
   // Fetch data on page load
   onMount(async () => {
@@ -37,60 +49,113 @@
     objective_id = parseInt(params.id);
 
     if (objective_id) {
+      await fetchUserProfile();
+
       try {
         // Fetch action plans
         const { data: plansData, error: plansError } = await supabase
-          .from('action_plans')
-          .select('*')
-          .eq('objective_id', objective_id);
-
+          .from("action_plans")
+          .select("*")
+          .eq("objective_id", objective_id);
         if (plansError) {
-          console.error('Error fetching action plans:', plansError);
+          console.error("Error fetching action plans:", plansError);
         } else {
           actionPlans = plansData;
         }
 
         // Fetch objective
         const { data: objectiveData, error: objectiveError } = await supabase
-          .from('strategic_objectives')
-          .select('id, name, strategic_goal_id')
-          .eq('id', objective_id)
+          .from("strategic_objectives")
+          .select("id, name, strategic_goal_id")
+          .eq("id", objective_id)
           .single();
 
         if (objectiveError) {
-          console.error('Error fetching objective:', objectiveError);
+          console.error("Error fetching objective:", objectiveError);
         } else {
           objective = objectiveData;
 
           // Fetch strategic goal
           const { data: goalData, error: goalError } = await supabase
-            .from('strategic_goals')
-            .select('id, name')
-            .eq('id', objectiveData.strategic_goal_id)
+            .from("strategic_goals")
+            .select("id, name")
+            .eq("id", objectiveData.strategic_goal_id)
             .single();
 
           if (goalError) {
-            console.error('Error fetching strategic goal:', goalError);
+            console.error("Error fetching strategic goal:", goalError);
           } else {
             strategicGoal = goalData;
           }
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error("Error:", error);
       } finally {
         isLoading = false;
       }
     } else {
-      console.error('Objective ID is missing.');
+      console.error("Objective ID is missing.");
       isLoading = false;
     }
   });
 
+  // Approve action plan and add to plan_monitoring table
+  const approveActionPlan = async (planId: number) => {
+    if (!profile_id) {
+      console.error("User profile ID is required.");
+      return;
+    }
+
+    try {
+      const { error: updateError } = await supabase
+        .from("action_plans")
+        .update({ is_approved: true })
+        .eq("id", planId);
+
+      if (updateError) {
+        console.error("Error approving action plan:", updateError);
+        return;
+      }
+
+      // Add to plan_monitoring table
+      const { error: insertError } = await supabase.from("plan_monitoring").insert({
+        action_plan_id: planId,
+        profile_id,
+      });
+
+      if (insertError) {
+        console.error("Error inserting into plan_monitoring:", insertError);
+      } else {
+        // Update local state
+        actionPlans = actionPlans.map((plan) =>
+          plan.id === planId ? { ...plan, is_approved: true } : plan
+        );
+      }
+    } catch (error) {
+      console.error("Error approving action plan:", error);
+    }
+  };
+
+  const deleteActionPlan = async (planId: number) => {
+    try {
+      const { error } = await supabase.from("action_plans").delete().eq("id", planId);
+      if (error) {
+        console.error("Error deleting action plan:", error);
+      } else {
+        actionPlans = actionPlans.filter((plan) => plan.id !== planId);
+      }
+    } catch (error) {
+      console.error("Error deleting action plan:", error);
+    }
+  };
+
   // Export to PDF using jsPDF and AutoTable
   const exportToPDF = () => {
-    const doc = new jsPDF('landscape');
-    const title = `Action Plans for Objective: ${objective?.name || 'N/A'}`;
-    const goalName = strategicGoal ? `Strategic Goal: ${strategicGoal.name}` : 'No Strategic Goal Assigned';
+    const doc = new jsPDF("landscape");
+    const title = `Action Plans for Objective: ${objective?.name || "N/A"}`;
+    const goalName = strategicGoal
+      ? `Strategic Goal: ${strategicGoal.name}`
+      : "No Strategic Goal Assigned";
 
     // Add title
     doc.setFontSize(10);
@@ -98,12 +163,19 @@
     doc.text(goalName, 14, 25);
 
     // Define table data
-    const columns = ['Actions Taken', 'KPI', 'Target Output', 'Key Person Responsible'];
+    const columns = [
+      "Actions Taken",
+      "KPI",
+      "Target Output",
+      "Key Person Responsible",
+      "Approved",
+    ];
     const rows = actionPlans.map((plan) => [
       plan.actions_taken,
       plan.kpi,
       plan.target_output,
       plan.key_person_responsible,
+      plan.is_approved ? "Yes" : "No",
     ]);
 
     // Add AutoTable
@@ -111,27 +183,12 @@
       head: [columns],
       body: rows,
       startY: 35,
-      theme: 'grid',
+      theme: "grid",
       styles: { fontSize: 10 },
       headStyles: { fillColor: [41, 128, 185] }, // Blue color for header
     });
 
-    doc.save('ActionPlans.pdf');
-  };
-
-  // Delete a specific action plan by ID
-  const deleteActionPlan = async (id: number) => {
-    try {
-      const { error } = await supabase.from('action_plans').delete().eq('id', id);
-
-      if (error) {
-        console.error('Error deleting action plan:', error);
-      } else {
-        actionPlans = actionPlans.filter((plan) => plan.id !== id);
-      }
-    } catch (error) {
-      console.error('Error deleting action plan:', error);
-    }
+    doc.save("ActionPlans.pdf");
   };
 </script>
 
@@ -181,7 +238,13 @@
               <td>{plan.target_output}</td>
               <td>{plan.key_person_responsible}</td>
               <td class="flex space-x-2">
-                <button class="btn btn-sm btn-success text-white">Approve Plan</button>
+                <button
+                  class="btn btn-sm btn-success text-white"
+                  on:click={() => approveActionPlan(plan.id)}
+                  disabled={plan.is_approved}
+                >
+                  {plan.is_approved ? "Approved" : "Approve"}
+                </button>
                 <button
                   class="btn btn-sm btn-error text-white"
                   on:click={() => deleteActionPlan(plan.id)}

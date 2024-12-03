@@ -1,6 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { supabase } from '$lib/supabaseClient';
+    import jsPDF from 'jspdf';
+    import autoTable from 'jspdf-autotable';
+
 
     interface Opportunity {
         id: number;
@@ -12,7 +15,7 @@
         budget: number;
         profile_id: string;
         is_approved: boolean;
-        department_name: string; // Add department name field
+        department_name: string;
     }
 
     let opportunities: Opportunity[] = [];
@@ -26,7 +29,7 @@
 
     const fetchUserProfile = async (): Promise<void> => {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError) {
             console.error('Error fetching session:', sessionError);
             errorMessage = "Session could not be retrieved.";
@@ -63,7 +66,7 @@
                     department_id,
                     departments (name)
                 )
-            `); // Fetch department name via profiles and departments
+            `);
 
         if (error) {
             console.error('Error fetching opportunities:', error);
@@ -72,7 +75,7 @@
         } else {
             opportunities = data.map((opportunity: any) => ({
                 ...opportunity,
-                department_name: opportunity.profiles?.departments?.name || 'N/A', // Map department name
+                department_name: opportunity.profiles?.departments?.name || 'N/A',
             }));
         }
         isLoading = false;
@@ -127,48 +130,82 @@
     };
 
     const approveOpportunity = async (opportunity: Opportunity) => {
-    isApproving = true;
+        isApproving = true;
 
-    try {
-        // Update the is_approved field in the opportunities table
-        const { error: updateError } = await supabase
-            .from('opportunities')
-            .update({ is_approved: true })
-            .eq('id', opportunity.id);
+        try {
+            const { error: updateError } = await supabase
+                .from('opportunities')
+                .update({ is_approved: true })
+                .eq('id', opportunity.id);
 
-        if (updateError) {
-            console.error('Error updating opportunity:', updateError);
-            errorMessage = "Failed to approve opportunity.";
+            if (updateError) {
+                console.error('Error updating opportunity:', updateError);
+                errorMessage = "Failed to approve opportunity.";
+                setTimeout(() => (errorMessage = null), 2000);
+                isApproving = false;
+                return;
+            }
+
+            const { error: insertError } = await supabase
+                .from('opt_monitoring')
+                .insert({
+                    opt_id: opportunity.id,
+                    profile_id: opportunity.profile_id,
+                    is_accomplished: false,
+                });
+
+            if (insertError) {
+                console.error('Error inserting into opt_monitoring:', insertError);
+                errorMessage = "Failed to add opportunity to monitoring.";
+                setTimeout(() => (errorMessage = null), 2000);
+            }
+
+            fetchOpportunities();
+        } catch (error) {
+            console.error('Unexpected error:', error);
+            errorMessage = "An unexpected error occurred.";
             setTimeout(() => (errorMessage = null), 2000);
+        } finally {
             isApproving = false;
-            return;
         }
+    };
 
-        // Insert the opportunity into the opt_monitoring table with profile_id
-        const { error: insertError } = await supabase
-            .from('opt_monitoring')
-            .insert({
-                opt_id: opportunity.id,
-                profile_id: opportunity.profile_id, // Include the profile_id
-                is_accomplished: false,
-            });
+    const exportToPDF = () => {
+    // Initialize jsPDF with landscape orientation
+    const doc = new jsPDF('landscape');
+    const tableColumnHeaders = [
+        "Opportunity Statement",
+        "Planned Actions",
+        "KPI",
+        "Key Persons",
+        "Target Output",
+        "Budget",
+        "Department",
+    ];
+    const tableRows = opportunities.map((opportunity) => [
+        opportunity.opt_statement,
+        opportunity.planned_actions,
+        opportunity.kpi,
+        opportunity.key_persons,
+        opportunity.target_output,
+        opportunity.budget.toString(),
+        opportunity.department_name,
+    ]);
 
-        if (insertError) {
-            console.error('Error inserting into opt_monitoring:', insertError); 
-            errorMessage = "Failed to add opportunity to monitoring.";
-            setTimeout(() => (errorMessage = null), 2000);
-        }
+    // Set the title and add it to the PDF
+    doc.text("Opportunities Report", 14, 10);
 
-        // Refresh the opportunities list
-        fetchOpportunities();
-    } catch (error) {
-        console.error('Unexpected error:', error);
-        errorMessage = "An unexpected error occurred.";
-        setTimeout(() => (errorMessage = null), 2000);
-    } finally {
-        isApproving = false;
-    }
-};  
+    // Use autoTable to add the table in landscape format
+    autoTable(doc, {
+        head: [tableColumnHeaders],
+        body: tableRows,
+        startY: 20, // Start table below the title
+    });
+
+    // Save the PDF file
+    doc.save("Opportunities_Report.pdf");
+};
+
 
     onMount(() => {
         fetchUserProfile();
@@ -176,7 +213,11 @@
 </script>
 
 <div class="container mx-auto p-6">
-    <h2 class="text-2xl text-white font-bold mb-6">My Opportunities</h2>
+    <h2 class="text-2xl  font-bold mb-6">My Opportunities</h2>
+
+    <button class="btn btn-accent my-5" on:click={exportToPDF}>
+        Export to PDF
+    </button>
 
     {#if errorMessage}
         <div class="text-red-500 mb-4">{errorMessage}</div>
@@ -197,22 +238,22 @@
                         <th class="px-4 py-2 text-left">Key Persons</th>
                         <th class="px-4 py-2 text-left">Target Output</th>
                         <th class="px-4 py-2 text-left">Budget</th>
-                        <th class="px-4 py-2 text-left">Department</th> <!-- Add Department Column -->
+                        <th class="px-4 py-2 text-left">Department</th>
                         <th class="px-4 py-2 text-left">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {#each opportunities as opportunity}
-                        <tr class="hover:bg-gray-700">
+                        <tr class="hover">
                             <td class="px-4 py-2">{opportunity.opt_statement}</td>
                             <td class="px-4 py-2">{opportunity.planned_actions}</td>
                             <td class="px-4 py-2">{opportunity.kpi}</td>
                             <td class="px-4 py-2">{opportunity.key_persons}</td>
                             <td class="px-4 py-2">{opportunity.target_output}</td>
                             <td class="px-4 py-2">{opportunity.budget}</td>
-                            <td class="px-4 py-2">{opportunity.department_name}</td> <!-- Display Department Name -->
+                            <td class="px-4 py-2">{opportunity.department_name}</td>
                             <td class="px-4 py-2 flex gap-2">
-                                <button on:click={() => editOpportunity(opportunity)} class="btn  bg-blue-600 hover:bg-blue-700 text-white font-medium ">Edit</button>
+                                <button on:click={() => editOpportunity(opportunity)} class="btn bg-blue-600 hover:bg-blue-700 text-white font-medium">Edit</button>
                                 <button on:click={() => approveOpportunity(opportunity)}
                                     class="btn text-white {opportunity.is_approved ? 'bg-green-700 cursor-not-allowed' : 'btn-success'}"
                                     disabled={opportunity.is_approved}>

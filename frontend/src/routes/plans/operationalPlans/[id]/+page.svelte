@@ -9,6 +9,7 @@
     target_output: string;
     key_person_responsible: string;
     objective_id: number;
+    profile_id: string; // Profile ID added
   }
 
   interface StrategicObjective {
@@ -28,6 +29,7 @@
       target_output: "",
       key_person_responsible: "",
       objective_id: 0,
+      profile_id: "", // Default value
     },
   ];
 
@@ -37,6 +39,7 @@
     target_output: "",
     key_person_responsible: "",
     objective_id: 0,
+    profile_id: "", // Default value
   };
 
   let strategicObjective: StrategicObjective | null = null;
@@ -45,6 +48,9 @@
   let alertType = "info";
   let objective_id: number | null = null;
   let isSubmitting = false;
+
+  // Fetch profile_id from logged-in user
+  let profile_id: string = "";
 
   onMount(() => {
     const { params } = $page;
@@ -56,10 +62,21 @@
 
       // Fetch the strategic objective and related goal
       fetchStrategicObjectiveAndGoal(objective_id);
+      fetchUserProfileId(); // Fetch profile_id of the logged-in user
     } else {
       showAlert("Objective ID is missing.", "error");
     }
   });
+
+  // Fetch profile_id for the logged-in user
+  const fetchUserProfileId = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      profile_id = user.id; // Profile ID is the user id
+    } else {
+      showAlert("User not logged in.", "error");
+    }
+  };
 
   const fetchStrategicObjectiveAndGoal = async (objective_id: number) => {
     try {
@@ -120,6 +137,7 @@
 
     const plansToSubmit = actionPlans.map((plan) => ({
       ...plan,
+      profile_id: profile_id || newActionPlan.profile_id, // Include profile_id
       objective_id: plan.objective_id || newActionPlan.objective_id,
     }));
 
@@ -265,6 +283,8 @@
     </button>
   </div>
 </div>
+
+
 
 
 <style>

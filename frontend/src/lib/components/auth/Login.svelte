@@ -119,7 +119,7 @@
         />
         <button
           type="submit"
-          class="btn btn-primary w-full"
+          class="btn bg-rose-700 w-full text-white"
           disabled={isLoading}
         >
           {#if isLoading}
