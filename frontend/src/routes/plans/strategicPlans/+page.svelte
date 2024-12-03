@@ -34,14 +34,12 @@
       profile_id: "",
     },
   ];
-  let uploadedImageUrl: string | null = null;
   let loading: boolean = true;
 
   // Alert states
   let successMessage: string | null = null;
   let errorMessage: string | null = null;
 
-  // Fetch user profile details
   const fetchUserProfile = async () => {
     try {
       const { data: sessionData, error: sessionError } =
@@ -53,13 +51,12 @@
         const { user } = session;
         const { data, error } = await supabase
           .from("profiles")
-          .select("first_name, last_name, email, role, profile_pic, id")
+          .select("id")
           .eq("id", user.id)
           .single();
         if (error) throw error;
 
         profile = data;
-        uploadedImageUrl = profile.profile_pic || null;
       }
     } catch (error) {
       errorMessage = (error as Error).message;
@@ -68,7 +65,6 @@
     }
   };
 
-  // Fetch Strategic Goals
   const fetchStrategicGoals = async () => {
     try {
       const { data, error } = await supabase
@@ -82,7 +78,6 @@
     }
   };
 
-  // Add a new row for Strategic Objectives
   const addRow = () => {
     objectives = [
       ...objectives,
@@ -99,19 +94,16 @@
     ];
   };
 
-  // Remove a row from Strategic Objectives table
   const removeRow = (index: number) => {
     if (objectives.length > 1)
       objectives = objectives.filter((_, i) => i !== index);
   };
 
-  // Validate and Submit Strategic Objectives
   const handleSubmit = async () => {
     try {
       if (!selectedGoal) throw new Error("Please select a strategic goal");
       if (!profile?.id) throw new Error("Invalid profile");
 
-      // Check if all fields in each objective are filled
       for (const obj of objectives) {
         if (
           !obj.name.trim() ||
@@ -147,21 +139,26 @@
           strategic_goal_id: 0,
           profile_id: "",
         },
-      ]; // Reset the form
+      ];
     } catch (error) {
       errorMessage = (error as Error).message;
     }
   };
 
-  // Clear alerts after a few seconds
+  const adjustTextareaSize = (target: HTMLTextAreaElement) => {
+    target.style.height = "auto";
+    target.style.width = "auto";
+    target.style.height = `${target.scrollHeight}px`;
+    target.style.width = `${Math.max(300, target.scrollWidth)}px`; // Set a minimum width
+  };
+
   $: if (successMessage || errorMessage) {
     setTimeout(() => {
       successMessage = null;
       errorMessage = null;
     }, 5000);
-  }
+  };
 
-  // Fetch the data on mount
   onMount(() => {
     fetchUserProfile();
     fetchStrategicGoals();
@@ -171,7 +168,6 @@
 <div class="min-h-screen bg-base-300 p-8">
   <h1 class="text-2xl font-bold mb-4 text-white">Create Strategic Objectives</h1>
 
-  <!-- Alerts -->
   {#if successMessage}
     <div class="alert alert-success shadow-lg my-4">
       <div>
@@ -187,15 +183,14 @@
     </div>
   {/if}
 
-  <!-- Goal Selection -->
   <div class="mb-4">
-    <label for="strategic_goal" class="block text-lg font-bold text-white mb-2"
-      >Select Strategic Goal</label
-    >
+    <label for="strategic_goal" class="block text-lg font-bold text-white mb-2">
+      Select Strategic Goal
+    </label>
     <select
       id="strategic_goal"
       bind:value={selectedGoal}
-      class="select select-bordered w-full font-semibold"
+      class="select select-bordered w-full font-semibold bg-gray-800 text-white"
       required
     >
       <option value={null} disabled selected>Select a goal</option>
@@ -205,7 +200,6 @@
     </select>
   </div>
 
-  <!-- Dynamic Table for Objectives -->
   <div class="overflow-x-auto">
     <table class="table w-full table-zebra shadow-lg rounded-lg">
       <thead>
@@ -225,43 +219,49 @@
             <td>
               <textarea
                 bind:value={objective.name}
-                class="textarea textarea-bordered w-full"
+                class="textarea textarea-bordered w-full resize-none"
                 placeholder="Enter objective name"
+                on:input={(e) => adjustTextareaSize(e.target as HTMLTextAreaElement)}
               ></textarea>
             </td>
             <td>
               <textarea
                 bind:value={objective.strategic_initiatives}
-                class="textarea textarea-bordered w-full"
+                class="textarea textarea-bordered w-full resize-none"
                 placeholder="Enter strategic initiatives"
+                on:input={(e) => adjustTextareaSize(e.target as HTMLTextAreaElement)}
               ></textarea>
             </td>
             <td>
               <textarea
                 bind:value={objective.kpi}
-                class="textarea textarea-bordered w-full"
+                class="textarea textarea-bordered w-full resize-none"
                 placeholder="Enter KPI"
+                on:input={(e) => adjustTextareaSize(e.target as HTMLTextAreaElement)}
               ></textarea>
             </td>
             <td>
               <textarea
                 bind:value={objective.persons_involved}
-                class="textarea textarea-bordered w-full"
+                class="textarea textarea-bordered w-full resize-none"
                 placeholder="Enter persons involved"
+                on:input={(e) => adjustTextareaSize(e.target as HTMLTextAreaElement)}
               ></textarea>
             </td>
             <td>
               <textarea
                 bind:value={objective.target}
-                class="textarea textarea-bordered w-full"
+                class="textarea textarea-bordered w-full resize-none"
                 placeholder="Enter target"
+                on:input={(e) => adjustTextareaSize(e.target as HTMLTextAreaElement)}
               ></textarea>
             </td>
             <td>
               <textarea
                 bind:value={objective.eval_measures}
-                class="textarea textarea-bordered w-full"
+                class="textarea textarea-bordered w-full resize-none"
                 placeholder="Enter evaluation measures"
+                on:input={(e) => adjustTextareaSize(e.target as HTMLTextAreaElement)}
               ></textarea>
             </td>
             <td>
@@ -275,7 +275,6 @@
     </table>
   </div>
 
-  <!-- Add and Submit Buttons -->
   <div class="flex space-x-4 mt-4">
     <button class="btn btn-primary" on:click={addRow}>
       Add Objective
@@ -285,4 +284,3 @@
     </button>
   </div>
 </div>
-

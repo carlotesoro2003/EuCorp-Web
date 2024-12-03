@@ -39,6 +39,7 @@
     "chart.js": "^4.4.6",
     "cors": "^2.8.5",
     "cropperjs": "^1.6.2",
+    "dom-to-pdf": "^0.3.2",
     "dotenv": "^16.4.5",
     "express": "^4.21.1"
   }
