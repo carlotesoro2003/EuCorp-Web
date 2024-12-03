@@ -64,7 +64,7 @@
       class="tab {activeTab === 'Plans' ? 'tab-active' : ''}"
       on:click={() => changeTab('Plans')}
       >Plans</a
-    >
+    > 
     <a
       role="tab"
       class="tab {activeTab === 'Risks' ? 'tab-active' : ''}"

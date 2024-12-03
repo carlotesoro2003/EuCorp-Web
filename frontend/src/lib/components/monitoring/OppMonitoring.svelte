@@ -1,7 +1,17 @@
 <script lang="ts">
     import { supabase } from "$lib/supabaseClient";
-    import DeptOptMonitoring from "$lib/components/monitoring/departments/DeptOptMonitoring.svelte";
+
+    //Admin Monitoring PAges
+    import AdminPlansMonitoring from "./admin/AdminPlansMonitoring.svelte";
+    import AdminRisksMonitoring from "./admin/AdminRisksMonitoring.svelte";
     import AdminOptMonitoring from "$lib/components/monitoring/admin/AdminOptMonitoring.svelte";
+
+
+    //Department Monitoring Pages
+    import DeptPlansMonitoring from "./departments/DeptPlansMonitoring.svelte";
+    import DeptRisksMonitoring from "./departments/DeptRisksMonitoring.svelte";
+    import DeptOptMonitoring from "$lib/components/monitoring/departments/DeptOptMonitoring.svelte";
+
   
     export let data: { session: any } | null = null; // Accept null as fallback
     let session: any = null;
