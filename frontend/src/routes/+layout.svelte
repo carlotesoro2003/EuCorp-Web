@@ -407,10 +407,3 @@
   </div>
 {/if}
 
-<style>
-  .loader {
-    font-size: 1.25rem;
-    font-weight: bold;
-    color: white;
-  }
-</style>

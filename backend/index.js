@@ -23,7 +23,7 @@ const genAi = new GoogleGenerativeAI(apiKey);
 // Initialize Express app
 const app = express();
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: 'http://localhost:5173', // Frontend URL
     methods: ['POST'],
     allowedHeaders: ['Content-Type']
 }));
@@ -55,6 +55,42 @@ app.post("/evaluate-goal", async (req, res) => {
             throw new Error("No response received from the AI model.");
         }
         res.json({ aiEvaluation });
+    } catch (error) {
+        console.error("Error with the Google Generative AI API:", error.message);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
+    }
+});
+
+// New endpoint to generate a summary report
+app.post("/generate-summary", async (req, res) => {
+    console.log("Request body:", req.body); // Log the incoming request body
+    const { monitoringData } = req.body;
+
+    // Validation
+    if (!monitoringData || !Array.isArray(monitoringData) || monitoringData.length === 0) {
+        return res.status(400).json({ error: "Monitoring data is required and should be a non-empty array." });
+    }
+
+    try {
+        // Get the Gemini model
+        const model = genAi.getGenerativeModel({ model: "gemini-pro" });
+
+        // Prepare the prompt
+        const formattedData = monitoringData.map(item => {
+            return `Goal: ${item.opt_statement}, KPI: ${item.kpi}, Status: ${item.achieved ? "Achieved" : "Not Achieved"}, Evaluation: ${item.evaluation || "Pending"}`;
+        }).join("\n");
+
+        const prompt = `Based on the following monitoring data, generate a summary report of the performance:\n${formattedData}`;
+
+        // Generate response using the AI model
+        const result = await model.generateContent(prompt);
+
+        // Extract and send the AI's response
+        const summaryReport = result.response?.text?.();
+        if (!summaryReport) {
+            throw new Error("No response received from the AI model.");
+        }
+        res.json({ summaryReport });
     } catch (error) {
         console.error("Error with the Google Generative AI API:", error.message);
         res.status(500).json({ error: "Internal Server Error", details: error.message });

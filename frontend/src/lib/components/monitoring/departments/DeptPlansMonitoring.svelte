@@ -22,7 +22,7 @@
   let showDialog = false;
   let dialogStatement = "";
 
-  const backendUrl = 'http://localhost:3000/evaluate-goal'; // Replace with the actual AI backend URL
+  const backendUrl = 'http://localhost:3000/evaluate-goal'; 
 
   // Fetch the logged-in user's profile
   const fetchUserProfile = async () => {
@@ -184,9 +184,9 @@
           <tr>
             <th class="px-4 py-3">Strategic Goal</th>
             <th class="px-4 py-3">Objective Name</th>
-            <th class="px-4 py-3">Actions Taken</th>
+            <th class="px-4 py-3">Strategic Initiatives</th>
             <th class="px-4 py-3">KPI</th>
-            <th class="px-4 py-3">Evaluation</th>
+            <th class="px-4 py-3">Actions Taken to Achieve Action Plan</th>
             <th class="px-4 py-3">Status</th>
             <th class="px-4 py-3">Actions</th>
           </tr>
@@ -201,11 +201,12 @@
               <td class="px-4 py-3">
                 <textarea
                   class="border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-indigo-200"
-                  placeholder="Enter your evaluation"
+                  placeholder="Enter actions taken..."
                   value={plan.evaluation}
-                  on:input={(e) =>
-                    plan.evaluation = (e.target as HTMLTextAreaElement).value
-                  }
+                    on:input={(e) => {
+                    plan.evaluation = (e.target as HTMLTextAreaElement).value;
+                    autoResize(e);
+                    }}
                   style="overflow:hidden; resize:none;"
                   disabled={plan.is_accomplished}
                 ></textarea>
