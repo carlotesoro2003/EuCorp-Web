@@ -75,7 +75,7 @@
     // Export to PDF using jsPDF and AutoTable
     const exportToPDF = () => {
       const doc = new jsPDF("landscape");
-      const title = `Plan Monitoring Report (${filterType.toUpperCase()})`;
+      const title = `Plan Monitoring Report`;
   
       doc.setFontSize(12);
       doc.text(title, 14, 15);
