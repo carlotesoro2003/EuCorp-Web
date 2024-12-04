@@ -243,7 +243,7 @@
 
   <!-- Strategic Goals Table -->
   <h1 class=" text-3xl font-bold mb-4">Strategic Goals</h1>
-  <button class="btn bg-indigo-600 hover:bg-indigo-700 text-white font-medium mb-5 " on:click={openCreateDialog}>Add Strategic Goal</button>
+  <button class="btn btn-primary text-white font-medium mb-5 " on:click={openCreateDialog}>Add Strategic Goal</button>
   {#if isLoading}
       <div class="flex justify-center items-center py-6">
           <span class="loading loading-spinner text-primary">Loading...</span>

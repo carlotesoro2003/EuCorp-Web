@@ -177,8 +177,8 @@
               <tr class="hover border-b">
                 <td class="px-4 py-3">{plan.actions_taken}</td>
                 <td class="px-4 py-3">{plan.kpi}</td>
-                <td class="px-4 py-3">{plan.evaluation}</td>
-                <td class="px-4 py-3">{plan.statement}</td>
+                <td class="px-4 py-3">{plan.evaluation || "Pending Evaluation"}</td>
+                <td class="px-4 py-3">{plan.statement || "Pending Statement"}</td>
                 <td class="px-4 py-3">
                   {plan.is_accomplished ? "Achieved" : "Not Achieved"}
                 </td>

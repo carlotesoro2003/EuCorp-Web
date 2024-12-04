@@ -26,7 +26,7 @@
   let email: string | null = null;
 
   let currentPath = "";
-  let isDarkMode = false;
+  let isDarkMode = true;
 
   $: currentPath = $page.url.pathname;
 
@@ -47,14 +47,16 @@
 
       if (fetchError) {
         if (fetchError.code === "PGRST116") {
-          const { error: insertError } = await supabase.from("profiles").insert({
-            id: user.id,
-            email: user.email,
-            first_name: user.user_metadata?.first_name || "New",
-            last_name: user.user_metadata?.last_name || "User",
-            role: "user",
-            is_verified: false,
-          });
+          const { error: insertError } = await supabase
+            .from("profiles")
+            .insert({
+              id: user.id,
+              email: user.email,
+              first_name: user.user_metadata?.first_name || "New",
+              last_name: user.user_metadata?.last_name || "User",
+              role: "user",
+              is_verified: false,
+            });
 
           if (insertError) {
             goto("/login");
@@ -122,15 +124,21 @@
   });
 </script>
 
+<!-- Render loading spinner during session validation -->
 {#if loading}
   <div class="flex items-center justify-center min-h-screen bg-base-300">
     <span class="loading loading-spinner loading-lg"></span>
   </div>
+
+  <!-- Render layout based on session and verification status -->
+
+  <!-- Render main layout for verified users -->
 {:else if session && isVerified}
   <div class="flex h-screen bg-base-100 overflow-hidden">
+    <!-- Sidebar navigation -->
     <aside class="w-64 bg-base-200 h-screen fixed shadow-lg z-50">
       <div class="h-16 flex items-center justify-between bg-primary px-4">
-        <span class="font-bold text-lg">Eucorp</span>
+        <span class="font-bold text-lg">EuCorp</span>
       </div>
       <nav class="flex-1 py-4 px-2">
         <ul class="menu space-y-2">
@@ -312,32 +320,63 @@
         </ul>
       </nav>
     </aside>
+
+    <!--NAVBAR-->
     <div class="flex flex-col flex-1 ml-64 overflow-auto">
-      <header class="h-16 flex justify-between bg-base-300 items-center px-4 fixed top-0 left-64 right-0 z-40 shadow">
+      <header
+        class="h-16 flex justify-between bg-base-300 items-center px-4 fixed top-0 left-64 right-0 z-40 shadow"
+      >
+        <!--ADMIN PANEL /DEPARTMENT NAME-->
         <div class="flex items-center">
-          <span class="font-bold text-lg">{userRole === "admin" ? "Admin Panel" : departmentName} Dashboard</span>
+          <span class="font-bold text-lg"
+            >{userRole === "admin" ? "Admin Panel" : departmentName} Dashboard</span
+          >
         </div>
         <div class="flex items-center space-x-4">
-          <button on:click={toggleTheme} class="btn btn-circle btn-sm bg-transparent border-none">
+          <!--LIGHT/DARK MODE-->
+          <button
+            on:click={toggleTheme}
+            class="btn btn-circle btn-sm bg-transparent border-none"
+          >
             {#if isDarkMode}
               <IconMoon class="h-6 w-6" />
             {:else}
               <IconSun class="h-6 w-6" />
             {/if}
           </button>
+          <!--USER PROFILE PIC -->
           <div class="dropdown dropdown-end">
             <button class="btn btn-ghost">
               {#if profilePic}
-                <img src={profilePic} alt="Profile" class="w-10 h-10 rounded-full" />
+                <img
+                  src={profilePic}
+                  alt="Profile"
+                  class="w-10 h-10 rounded-full"
+                />
               {:else}
-                <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 18.364A7.986 7.986 7.986 0 0112 14a7.986 7.986 7.986 0 016.879 4.364M12 10a4 4 0 110-8 4 4 0 010 8z" />
+                <div
+                  class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 text-gray-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5.121 18.364A7.986 7.986 7.986 0 0112 14a7.986 7.986 7.986 0 016.879 4.364M12 10a4 4 0 110-8 4 4 0 010 8z"
+                    />
                   </svg>
                 </div>
               {/if}
             </button>
-            <ul class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+            <ul
+              class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52"
+            >
               <li><span class="text-gray-500 text-xs">{email}</span></li>
               <li><a href="/profile">Profile</a></li>
               <li>
@@ -356,11 +395,17 @@
   </div>
 {:else if !session}
   <Login />
+
+  <!-- Render pending verification message -->
 {:else}
   <div class="flex items-center justify-center min-h-screen bg-base-300">
     <div class="text-center">
-      <h1 class="text-2xl font-bold text-yellow-500 mb-4">Pending for System Access</h1>
-      <p class="text-white">Your account is under review. Please wait for verification.</p>
+      <h1 class="text-2xl font-bold text-yellow-500 mb-4">
+        Pending for System Access
+      </h1>
+      <p class="text-white">
+        Your account is under review. Please wait for verification.
+      </p>
     </div>
   </div>
 {/if}
