@@ -1,6 +1,6 @@
 {
 	"runtime": "nodejs22.x",
-	"handler": "..\\..\\..\\..\\..\\..\\..\\Users\\Carlo Tesoro\\Desktop\\Capstone-Official\\EuCorp-Web\\frontend\\.svelte-kit\\vercel-tmp\\index.js",
+	"handler": "..\\..\\..\\..\\Projects\\EuCorp-Web\\frontend\\.svelte-kit\\vercel-tmp\\index.js",
 	"launcherType": "Nodejs",
 	"experimentalResponseStreaming": true,
 	"framework": {

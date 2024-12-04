@@ -38,7 +38,7 @@
           EuCorp
         </h1>
         <p class="text-xl text-gray-300 max-w-md">
-          Your Institutional Planning System
+          Our Institutional Planning System
         </p>
       </div>
 
