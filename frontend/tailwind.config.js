@@ -98,7 +98,7 @@ const config = {
     },
     plugins: [tailwindcssAnimate, require('daisyui')],
     daisyui: {
-        themes: ['light', 'dark', 'nord', 'autumn'],
+        themes: ['dark','light', 'nord', 'autumn'],
     },
 };
 

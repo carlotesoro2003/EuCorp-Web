@@ -15,7 +15,7 @@
   
     let opportunities: Opportunity[] = [];
     let filteredOpportunities: Opportunity[] = [];
-    let filterStatus: string = "All"; // Filter state: "All", "Achieved", or "Not Achieved"
+    let filterStatus: string = "All"; 
     let isLoading = true;
   
     // Fetch all opportunities from the opt_monitoring table

@@ -6,6 +6,9 @@
 	"/api/evaluate-goal": [
 		"src/routes/api/evaluate-goal/+server.ts"
 	],
+	"/api/summary-report-plan-monitoring": [
+		"src/routes/api/summary-report-plan-monitoring/+server.ts"
+	],
 	"/classification": [
 		"src/routes/+layout.ts"
 	],
