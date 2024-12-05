@@ -2,6 +2,9 @@
 import { defineConfig } from 'vite'
 import { sveltekit } from '@sveltejs/kit/vite'
 import Icons from 'unplugin-icons/vite'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 export default defineConfig({
   plugins: [
@@ -11,14 +14,4 @@ export default defineConfig({
 	  autoInstall: true,
     })
   ],
-  server: {
-    port: 5173, // Vite's frontend dev server
-    proxy: {
-        '/api': {
-            target: 'http://localhost:3000', // Backend service
-            changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/api/, '') // Remove /api prefix
-        }
-    }
-}
 })

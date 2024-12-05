@@ -3,9 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev:frontend": "vite dev",
-    "dev:backend": "node ./backend/index.js",
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
