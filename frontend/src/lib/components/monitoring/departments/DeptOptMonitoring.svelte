@@ -259,7 +259,7 @@
         <tr>
           <th class="px-4 py-3">Opportunity Statement</th>
           <th class="px-4 py-3">Target (KPI)</th>
-          <th class="px-4 py-3">Evaluation</th>
+          <th class="px-4 py-3">Actions Taken to Achieve Opportunities</th>
           <th class="px-4 py-3">Achieved</th>
           <th class="px-4 py-3">Actions</th>
         </tr>

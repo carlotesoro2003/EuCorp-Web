@@ -10,7 +10,7 @@ return {
 	assets: new Set(["favicon.png","images/login_bg.png"]),
 	mimeTypes: {".png":"image/png"},
 	_: {
-		client: {"start":"_app/immutable/entry/start.D6nqEYmQ.js","app":"_app/immutable/entry/app.a5xhjxsI.js","imports":["_app/immutable/entry/start.D6nqEYmQ.js","_app/immutable/chunks/entry.1ToqRDAj.js","_app/immutable/chunks/runtime.g0my00JR.js","_app/immutable/chunks/index.C34d6m6q.js","_app/immutable/chunks/utils.B1xoYXWc.js","_app/immutable/entry/app.a5xhjxsI.js","_app/immutable/chunks/preload-helper.C1FmrZbK.js","_app/immutable/chunks/runtime.g0my00JR.js","_app/immutable/chunks/render.pmuW5QOO.js","_app/immutable/chunks/utils.sCj8HAia.js","_app/immutable/chunks/disclose-version.CM6f1PTD.js","_app/immutable/chunks/if.DVEvk735.js","_app/immutable/chunks/proxy.DHlUMAZI.js","_app/immutable/chunks/props.BjMJLEAs.js","_app/immutable/chunks/store.6LPOOnpP.js","_app/immutable/chunks/utils.B1xoYXWc.js","_app/immutable/chunks/index-client.v1G0sw0w.js"],"stylesheets":[],"fonts":[],"uses_env_dynamic_public":false},
+		client: {"start":"_app/immutable/entry/start.BvOT8Cmk.js","app":"_app/immutable/entry/app.DhBcy2qn.js","imports":["_app/immutable/entry/start.BvOT8Cmk.js","_app/immutable/chunks/entry.CFewmVp1.js","_app/immutable/chunks/runtime.g0my00JR.js","_app/immutable/chunks/index.C34d6m6q.js","_app/immutable/chunks/utils.B1xoYXWc.js","_app/immutable/entry/app.DhBcy2qn.js","_app/immutable/chunks/preload-helper.C1FmrZbK.js","_app/immutable/chunks/runtime.g0my00JR.js","_app/immutable/chunks/render.pmuW5QOO.js","_app/immutable/chunks/utils.sCj8HAia.js","_app/immutable/chunks/disclose-version.CM6f1PTD.js","_app/immutable/chunks/if.DVEvk735.js","_app/immutable/chunks/proxy.DHlUMAZI.js","_app/immutable/chunks/props.BjMJLEAs.js","_app/immutable/chunks/store.6LPOOnpP.js","_app/immutable/chunks/utils.B1xoYXWc.js","_app/immutable/chunks/index-client.v1G0sw0w.js"],"stylesheets":[],"fonts":[],"uses_env_dynamic_public":false},
 		nodes: [
 			__memo(() => import('../output/server/nodes/0.js')),
 			__memo(() => import('../output/server/nodes/1.js')),
@@ -42,6 +42,13 @@ return {
 				params: [],
 				page: { layouts: [0,], errors: [1,], leaf: 2 },
 				endpoint: null
+			},
+			{
+				id: "/api/evaluate-goal",
+				pattern: /^\/api\/evaluate-goal\/?$/,
+				params: [],
+				page: null,
+				endpoint: __memo(() => import('../output/server/entries/endpoints/api/evaluate-goal/_server.ts.js'))
 			},
 			{
 				id: "/classification",

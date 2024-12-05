@@ -197,10 +197,10 @@
   <!-- Objective and Goal Information -->
   <div class="mb-4">
     {#if objective}
-      <p><strong>Objective Name:</strong> {objective.name}</p>
       {#if strategicGoal}
         <p><strong>Strategic Goal:</strong> {strategicGoal.name}</p>
       {/if}
+      <p><strong>Objective Name:</strong> {objective.name}</p>
     {:else if isLoading}
       <h2 class="text-xl font-bold">Loading Objective...</h2>
     {:else}

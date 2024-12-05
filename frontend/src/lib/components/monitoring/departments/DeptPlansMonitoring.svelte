@@ -1,7 +1,8 @@
 <script lang="ts">
+  import "tailwindcss/tailwind.css";
   import { supabase } from "$lib/supabaseClient";
-  import axios from "axios";
   import { onMount } from "svelte";
+  import { writable } from "svelte/store";
 
   interface ActionPlan {
     id: number;
@@ -14,29 +15,38 @@
     evaluation: string | null;
     statement: string | null;
     time_completed: string | null;
+    isLoading: boolean;
   }
 
-  let actionPlans: ActionPlan[] = [];
-  let profile_id: string | null = null;
-  let isLoading = true;
+  const actionPlans = writable<ActionPlan[]>([]);
+  let profileId: string | null = null;
   let showDialog = false;
   let dialogStatement = "";
+  let isLoadingPage = true;
 
-  const backendUrl = 'http://localhost:3000/evaluate-goal'; 
+  function openDialog(statement: string) {
+    dialogStatement = statement;
+    showDialog = true;
+  }
 
   // Fetch the logged-in user's profile
   const fetchUserProfile = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      profile_id = user.id;
-    } else {
-      console.error("No logged-in user found.");
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error || !session) {
+      console.error("Error fetching session:", error);
+      return;
     }
+
+    profileId = session.user.id;
   };
 
-  // Fetch the user's action plans and related data
+  // Fetch action plans and related monitoring data
   const fetchActionPlans = async () => {
-    if (!profile_id) return;
+    if (!profileId) return;
 
     try {
       const { data, error } = await supabase
@@ -51,14 +61,14 @@
             strategic_goals (name)
           )
         `)
-        .eq("profile_id", profile_id);
+        .eq("profile_id", profileId);
 
       if (error) {
         console.error("Error fetching action plans:", error);
         return;
       }
 
-      actionPlans = data.map((plan: any) => ({
+      const plans = data.map((plan: any) => ({
         id: plan.id,
         actions_taken: plan.actions_taken,
         kpi: plan.kpi,
@@ -69,92 +79,127 @@
         evaluation: null,
         statement: null,
         time_completed: null,
+        isLoading: false,
       }));
 
-      // Fetch related monitoring data for each action plan
-      await fetchPlanMonitoringData();
+      const monitoringData = await fetchPlanMonitoringData(plans.map((p) => p.id));
+
+      actionPlans.set(
+        plans.map((plan) => {
+          const monitoring = monitoringData.find((m) => m.action_plan_id === plan.id);
+          return {
+            ...plan,
+            is_accomplished: monitoring?.is_accomplished || false,
+            evaluation: monitoring?.evaluation || null,
+            statement: monitoring?.statement || null,
+            time_completed: monitoring?.time_completed || null,
+          };
+        })
+      );
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
-      isLoading = false;
+      isLoadingPage = false;
     }
   };
 
   // Fetch monitoring data for action plans
-  const fetchPlanMonitoringData = async () => {
+  const fetchPlanMonitoringData = async (planIds: number[]) => {
     try {
       const { data, error } = await supabase
         .from("plan_monitoring")
         .select("action_plan_id, is_accomplished, evaluation, statement, time_completed")
-        .in("action_plan_id", actionPlans.map(plan => plan.id));
+        .in("action_plan_id", planIds);
 
       if (error) {
         console.error("Error fetching monitoring data:", error);
-        return;
+        return [];
       }
 
-      // Map monitoring data back to the action plans
-      actionPlans = actionPlans.map(plan => {
-        const monitoringData = data.find((monitoring: any) => monitoring.action_plan_id === plan.id);
-        return {
-          ...plan,
-          is_accomplished: monitoringData?.is_accomplished || false,
-          evaluation: monitoringData?.evaluation || null,
-          statement: monitoringData?.statement || null,
-          time_completed: monitoringData?.time_completed || null,
-        };
-      });
-
-      console.log("Updated Action Plans with Monitoring Data:", actionPlans);
+      return data;
     } catch (error) {
-      console.error("Error fetching plan monitoring data:", error);
+      console.error("Error fetching monitoring data:", error);
+      return [];
     }
   };
 
+  // Evaluate a single action plan using AI
   const evaluateActionPlan = async (id: number, kpi: string, evaluation: string) => {
+    actionPlans.update((plans) =>
+      plans.map((plan) => (plan.id === id ? { ...plan, isLoading: true } : plan))
+    );
+
     try {
-      const response = await axios.post(backendUrl, { target: kpi, evaluation });
-      const aiEvaluation = response.data.aiEvaluation;
+      const response = await fetch("/api/evaluate-goal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: kpi, evaluation }),
+      });
 
-      const negativeKeywords = ["not achieved", "unsuccessful", "failed", "incomplete", "fell short", "below target", "did not meet", "not"];
-      const isAccomplished = !negativeKeywords.some(neg => aiEvaluation.toLowerCase().includes(neg));
+      const data = await response.json();
 
+      if (!response.ok || data.error) {
+        throw new Error(data.error || "Failed to evaluate action plan.");
+      }
+
+      const aiEvaluation = data.aiEvaluation;
+
+      if (typeof aiEvaluation !== "string") {
+        throw new TypeError("AI evaluation response is not a valid string.");
+      }
+
+      const negativeKeywords = [
+        "not achieved",
+        "unsuccessful",
+        "failed",
+        "incomplete",
+        "fell short",
+        "below target",
+        "did not meet",
+        "not",
+      ];
+
+      const isAccomplished = !negativeKeywords.some((neg) =>
+        aiEvaluation.toLowerCase().includes(neg)
+      );
       const timeCompleted = isAccomplished ? new Date().toISOString() : null;
 
+      // Update the database with the AI result
       const { error } = await supabase
         .from("plan_monitoring")
         .update({
           evaluation,
-          is_accomplished: isAccomplished,
           statement: aiEvaluation,
+          is_accomplished: isAccomplished,
           time_completed: timeCompleted,
         })
         .eq("action_plan_id", id);
 
       if (error) {
-        console.error("Error updating plan monitoring:", error);
-        return;
+        console.error("[ERROR] Error updating plan monitoring:", error);
       }
 
-      actionPlans = actionPlans.map((plan) =>
-        plan.id === id
-          ? {
-              ...plan,
-              is_accomplished: isAccomplished,
-              evaluation,
-              statement: aiEvaluation,
-              time_completed: timeCompleted,
-            }
-          : plan
+      // Update the local state
+      actionPlans.update((plans) =>
+        plans.map((plan) =>
+          plan.id === id
+            ? {
+                ...plan,
+                is_accomplished: isAccomplished,
+                evaluation,
+                statement: aiEvaluation,
+                time_completed: timeCompleted,
+                isLoading: false,
+              }
+            : plan
+        )
       );
     } catch (error) {
-      console.error("Error evaluating action plan:", error);
+      console.error("[ERROR] Error evaluating action plan:", error);
+      actionPlans.update((plans) =>
+        plans.map((plan) => (plan.id === id ? { ...plan, isLoading: false } : plan))
+      );
     }
-  };
-
-  const openDialog = (statement: string) => {
-    dialogStatement = statement;
-    showDialog = true;
   };
 
   const autoResize = (event: Event) => {
@@ -173,26 +218,27 @@
 <div class="min-h-screen p-8 bg-base-300">
   <h1 class="text-3xl font-bold mb-6">Plans Monitoring</h1>
 
-  {#if isLoading}
+  {#if isLoadingPage}
     <div class="text-center text-xl">
       <span class="loading loading-spinner loading-md"></span>
     </div>
-  {:else if actionPlans.length > 0}
+  {:else if $actionPlans.length > 0}
     <div class="overflow-x-auto shadow-lg rounded-lg">
       <table class="table-auto w-full text-left text-sm border-collapse">
         <thead class="uppercase text-xs">
           <tr>
             <th class="px-4 py-3">Strategic Goal</th>
             <th class="px-4 py-3">Objective Name</th>
-            <th class="px-4 py-3">Strategic Initiatives</th>
+            <th class="px-4 py-3">Actions Taken</th>
             <th class="px-4 py-3">KPI</th>
             <th class="px-4 py-3">Actions Taken to Achieve Action Plan</th>
             <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3">Remarks</th>
             <th class="px-4 py-3">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {#each actionPlans as plan}
+          {#each $actionPlans as plan}
             <tr class="hover border-b">
               <td class="px-4 py-3">{plan.strategic_goal_name}</td>
               <td class="px-4 py-3">{plan.objective_name}</td>
@@ -201,13 +247,18 @@
               <td class="px-4 py-3">
                 <textarea
                   class="border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-indigo-200"
-                  placeholder="Enter actions taken..."
+                  placeholder="Enter evaluation..."
                   value={plan.evaluation}
-                    on:input={(e) => {
-                    plan.evaluation = (e.target as HTMLTextAreaElement).value;
+                  on:input={(e) => {
+                    actionPlans.update((plans) =>
+                      plans.map((p) =>
+                        p.id === plan.id
+                          ? { ...p, evaluation: (e.target as HTMLTextAreaElement).value }
+                          : p
+                      )
+                    );
                     autoResize(e);
-                    }}
-                  style="overflow:hidden; resize:none;"
+                  }}
                   disabled={plan.is_accomplished}
                 ></textarea>
               </td>
@@ -219,19 +270,27 @@
                 {/if}
               </td>
               <td class="px-4 py-3">
-                <button
-                  on:click={() => evaluateActionPlan(plan.id, plan.kpi, plan.evaluation || "")}
-                  class="btn btn-success btn-sm"
-                  disabled={!plan.evaluation || plan.is_accomplished}
-                >
-                  Evaluate
-                </button>
                 {#if plan.statement}
+                <button
+                  on:click={() => openDialog(plan.statement || "")}
+                  class="btn btn-primary btn-sm ml-2"
+                >
+                  View Statement
+                </button>
+              {/if}
+              </td>
+              <td class="px-4 py-3">
+                {#if plan.isLoading}
+                  <span class="loading loading-spinner text-primary"></span>
+                {:else if plan.is_accomplished}
+                  <button class="btn btn-success btn-sm" disabled>Achieved</button>
+                {:else}
                   <button
-                    on:click={() => openDialog(plan.statement || "")}
-                    class="btn btn-primary btn-sm ml-2"
+                    on:click={() => evaluateActionPlan(plan.id, plan.kpi, plan.evaluation || "")}
+                    class="btn btn-success btn-sm"
+                    disabled={!plan.evaluation || plan.isLoading}
                   >
-                    View Statement
+                    Evaluate
                   </button>
                 {/if}
               </td>
@@ -257,10 +316,4 @@
   {/if}
 </div>
 
-<style>
-  .table {
-    border-spacing: 0;
-    border-collapse: collapse;
-    width: 100%;
-  }
-</style>
+

@@ -29,6 +29,10 @@
   },
   "_index2.js": {
     "file": "chunks/index2.js",
+    "name": "index"
+  },
+  "_index3.js": {
+    "file": "chunks/index3.js",
     "name": "index",
     "imports": [
       "_index.js"
@@ -75,8 +79,9 @@
     "imports": [
       "_index.js",
       "_internal.js",
+      "_index2.js",
       "_exports.js",
-      "_index2.js"
+      "_index3.js"
     ]
   },
   "src/routes/+layout.svelte": {
@@ -117,6 +122,15 @@
     "css": [
       "_app/immutable/assets/_page.YvBdQkoT.css",
       "_app/immutable/assets/tailwind.AdSUSTW5.css"
+    ]
+  },
+  "src/routes/api/evaluate-goal/+server.ts": {
+    "file": "entries/endpoints/api/evaluate-goal/_server.ts.js",
+    "name": "entries/endpoints/api/evaluate-goal/_server.ts",
+    "src": "src/routes/api/evaluate-goal/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_index2.js"
     ]
   },
   "src/routes/classification/+page.svelte": {
@@ -189,7 +203,7 @@
     "isEntry": true,
     "imports": [
       "_index.js",
-      "_index2.js"
+      "_index3.js"
     ],
     "css": [
       "_app/immutable/assets/_page.CoufgFaY.css",
