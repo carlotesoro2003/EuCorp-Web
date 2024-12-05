@@ -18,18 +18,19 @@ export const POST = async ({ request }: { request: Request }) => {
             );
         }
 
+        // Format the plans into descriptive text for the AI prompt
         const formattedPlans = plans
             .map(
                 (plan) =>
-                    `Action Taken: ${plan.actions_taken}, KPI: ${plan.kpi}, Status: ${
-                        plan.is_accomplished ? 'Achieved' : 'Not Achieved'
-                    }, Evaluation: ${plan.evaluation || 'Pending'}.`
+                    `The plan involved the following action: "${plan.actions_taken}". The key performance indicator (KPI) for this plan was "${plan.kpi}". The plan was ${plan.is_accomplished ? 'successfully achieved' : 'not achieved'}, with the following evaluation: "${plan.evaluation || 'Pending evaluation'}".`
             )
-            .join('\n');
+            .join(' ');
 
-        const prompt = `You are an expert analyst. Based on the following action plan data, write a detailed, comprehensive summary report. Evaluate the effectiveness of each action plan and provide insights into their overall performance:
-        \n${formattedPlans}
-        Write your response as a cohesive and professional narrative for stakeholders. Make it brief and not to long.
+        // AI prompt to generate a cohesive narrative summary
+        const prompt = `
+            You are a professional analyst tasked with creating a summary report based on the provided action plans. Here is the data for the action plans:
+            \n${formattedPlans}\n
+            Please write a detailed, cohesive, and professional narrative summarizing the overall performance of the plans. Highlight key achievements, areas needing improvement, and overall insights in essay format for stakeholders. Use paragraphs, avoid bullet points, and ensure the tone is formal and professional.
         `;
 
         // Generate the summary report using the AI model
@@ -37,7 +38,7 @@ export const POST = async ({ request }: { request: Request }) => {
         const response = await model.generateContent(prompt);
 
         const summaryReport = response.response?.text?.();
-        if(!summaryReport) {
+        if (!summaryReport) {
             throw new Error('No response received from the AI model.');
         }
 
