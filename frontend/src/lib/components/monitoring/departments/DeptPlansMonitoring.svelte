@@ -44,64 +44,90 @@
     profileId = session.user.id;
   };
 
-  // Fetch action plans and related monitoring data
-  const fetchActionPlans = async () => {
-    if (!profileId) return;
+  // Fetch action plans and related monitoring data based on department
+const fetchActionPlans = async () => {
+  try {
+    // Get the logged-in user's profile and department
+    const { data: userProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("department_id")
+      .eq("id", profileId)
+      .single();
 
-    try {
-      const { data, error } = await supabase
-        .from("action_plans")
-        .select(`
-          id,
-          actions_taken,
-          kpi,
-          objective_id,
-          strategic_objectives (
-            name,
-            strategic_goals (name)
-          )
-        `)
-        .eq("profile_id", profileId);
-
-      if (error) {
-        console.error("Error fetching action plans:", error);
-        return;
-      }
-
-      const plans = data.map((plan: any) => ({
-        id: plan.id,
-        actions_taken: plan.actions_taken,
-        kpi: plan.kpi,
-        objective_id: plan.objective_id,
-        strategic_goal_name: plan.strategic_objectives?.strategic_goals?.name || "No Goal Assigned",
-        objective_name: plan.strategic_objectives?.name || "No Objective Assigned",
-        is_accomplished: false,
-        evaluation: null,
-        statement: null,
-        time_completed: null,
-        isLoading: false,
-      }));
-
-      const monitoringData = await fetchPlanMonitoringData(plans.map((p) => p.id));
-
-      actionPlans.set(
-        plans.map((plan) => {
-          const monitoring = monitoringData.find((m) => m.action_plan_id === plan.id);
-          return {
-            ...plan,
-            is_accomplished: monitoring?.is_accomplished || false,
-            evaluation: monitoring?.evaluation || null,
-            statement: monitoring?.statement || null,
-            time_completed: monitoring?.time_completed || null,
-          };
-        })
-      );
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      isLoadingPage = false;
+    if (profileError || !userProfile?.department_id) {
+      console.error("Error fetching user profile or department:", profileError);
+      return;
     }
-  };
+
+    const deptId = userProfile.department_id;
+
+    // Fetch action plans for users in the same department
+    const { data: profileIds, error: profileIdsError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("department_id", deptId);
+
+    if (profileIdsError) {
+      console.error("Error fetching profile IDs:", profileIdsError);
+      return;
+    }
+
+    const profileIdList = profileIds.map((profile) => profile.id);
+
+    const { data, error } = await supabase
+      .from("action_plans")
+      .select(`
+        id,
+        actions_taken,
+        kpi,
+        objective_id,
+        strategic_objectives (
+          name,
+          strategic_goals (name)
+        )
+      `)
+      .in("profile_id", profileIdList); // Filter action plans by profiles in the same department
+
+    if (error) {
+      console.error("Error fetching action plans:", error);
+      return;
+    }
+
+    const plans = data.map((plan: any) => ({
+      id: plan.id,
+      actions_taken: plan.actions_taken,
+      kpi: plan.kpi,
+      objective_id: plan.objective_id,
+      strategic_goal_name: plan.strategic_objectives?.strategic_goals?.name || "No Goal Assigned",
+      objective_name: plan.strategic_objectives?.name || "No Objective Assigned",
+      is_accomplished: false,
+      evaluation: null,
+      statement: null,
+      time_completed: null,
+      isLoading: false,
+    }));
+
+    // Fetch related monitoring data
+    const monitoringData = await fetchPlanMonitoringData(plans.map((p) => p.id));
+
+    actionPlans.set(
+      plans.map((plan) => {
+        const monitoring = monitoringData.find((m) => m.action_plan_id === plan.id);
+        return {
+          ...plan,
+          is_accomplished: monitoring?.is_accomplished || false,
+          evaluation: monitoring?.evaluation || null,
+          statement: monitoring?.statement || null,
+          time_completed: monitoring?.time_completed || null,
+        };
+      })
+    );
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  } finally {
+    isLoadingPage = false;
+  }
+};
 
   // Fetch monitoring data for action plans
   const fetchPlanMonitoringData = async (planIds: number[]) => {

@@ -63,7 +63,7 @@
             return;
           }
         } else {
-          goto("/login");
+          goto("/");
           return;
         }
       }
