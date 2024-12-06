@@ -29,9 +29,34 @@
   let objectives: StrategicObjective[] = [];
   let isLoading = false;
   let goalId: number | null = null;
+  let adminName: string | null = null;
 
   let editingObjective: StrategicObjective | null = null;
   let updatedObjective: StrategicObjective = {} as StrategicObjective;
+
+  const fetchAdminName = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session || !session.user) return;
+
+      const { data: profileData, error } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", session.user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching admin name:", error);
+      } else if (profileData) {
+        adminName = `${profileData.first_name} ${profileData.last_name}`;
+      }
+    } catch (error) {
+      console.error("Error fetching admin details:", error);
+    }
+  };
 
   const fetchGoalDetails = async (): Promise<void> => {
     if (goalId === null) return;
@@ -151,6 +176,16 @@
       styles: { fontSize: 10 }, // Adjust font size for better fitting
     });
 
+    // Add signature block
+    const pageHeight = doc.internal.pageSize.height; // Get the height of the page
+    const signatureStartY = pageHeight - 30; // Position signature 30mm from the bottom
+
+    doc.setFontSize(12);
+    const nameToDisplay = adminName || "Admin Name";
+    doc.text(`${nameToDisplay}(sgnd)`, 14, signatureStartY - 5);
+    doc.text("_________________________", 14, signatureStartY);
+    doc.text("Corporate Planning Officer", 14, signatureStartY + 5);
+
     // Save the PDF
     doc.save("StrategicObjectives.pdf");
   };
@@ -158,6 +193,7 @@
   onMount(() => {
     $: goalId = $page.params.id ? parseInt($page.params.id) : null;
     fetchGoalDetails();
+    fetchAdminName(); // Fetch admin name dynamically
   });
 </script>
 
